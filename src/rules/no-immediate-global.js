@@ -4,6 +4,8 @@
  */
 "use strict";
 
+const path = require('path');
+
 //------------------------------------------------------------------------------
 // Rule Definition
 //------------------------------------------------------------------------------
@@ -27,14 +29,29 @@ module.exports = {
   create(context) {
     return {
       CallExpression: (node) => {
-        if(!context.getPhysicalFilename().substring(context.getCwd().length).startsWith('/src/global')) return;
-        if(node.callee.name === 'getGlobal'
-            && node.parent.type !== 'AssignmentExpression'
-        ) {
-          context.report({
-            node,
-            messageId: "noImmediateGlobal",
-          })
+        // Use the newer, non-deprecated properties from the context object
+        const filename = context.filename || context.sourceCode?.source?.path;
+        const cwd = process.cwd(); // Use Node.js process.cwd() instead of ESLint's getCwd()
+        
+        // Normalize paths to handle Windows backslashes
+        const relativePath = path.relative(cwd, filename);
+        const normalizedPath = path.normalize(relativePath);
+        
+        // Check if the file is in the src/global directory
+        if(!normalizedPath.startsWith(path.join('src', 'global'))) return;
+        
+        if(node.callee.name === 'getGlobal') {
+          // Check if getGlobal() is used in a valid assignment context
+          const isAssignmentExpr = node.parent.type === 'AssignmentExpression' && node.parent.right === node;
+          const isVariableDeclarator = node.parent.type === 'VariableDeclarator' && node.parent.init === node;
+          
+          // Only report if getGlobal is not used for assignment
+          if(!isAssignmentExpr && !isVariableDeclarator) {
+            context.report({
+              node,
+              messageId: "noImmediateGlobal",
+            });
+          }
         }
       }
     };
