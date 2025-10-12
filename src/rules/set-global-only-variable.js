@@ -37,7 +37,7 @@ module.exports = {
                 suggest: [{
                   desc: "Move the global assignment before the setGlobal call",
                   *fix(fixer) {
-                    const sc = context.getSourceCode();
+                    const sc = context.sourceCode;
                     const parent = node.parent;
                     yield fixer.insertTextBefore(parent, 'global = ' + sc.getText(node.arguments[0]) + ';\n');
                     yield fixer.replaceText(node.arguments[0], 'global');
